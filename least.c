@@ -2,19 +2,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
 #define ESC 27
 /*
- * TODO: Don't hard code buffer and terminal size.
+ * TODO: Don't hard code buffer size.
  */
 #define BUFFER_LINES 1024
 #define BUFFER_COLS 80
-#define TERMINAL_ROWS 30
 
 char buffer[BUFFER_LINES][BUFFER_COLS];
-int first_line, num_lines;
+int terminal_rows, first_line, num_lines;
 
 struct termios *init_terminal(void)
 {
@@ -52,17 +52,17 @@ void scroll_up(void)
     print_escape_sequence("T");
     position_cursor(1, 1);
     puts(buffer[--first_line]);
-    position_cursor(TERMINAL_ROWS + 1, 1);
+    position_cursor(terminal_rows, 1);
 }
 
 void scroll_down(void)
 {
-    if (first_line + TERMINAL_ROWS == num_lines)
+    if (first_line + terminal_rows == num_lines)
         return;
 
     print_escape_sequence("S");
     print_escape_sequence("F");
-    puts(buffer[++first_line + TERMINAL_ROWS]);
+    puts(buffer[++first_line + terminal_rows]);
 }
 
 void handle_escape_sequence(void)
@@ -93,7 +93,7 @@ void read_content(const char *file)
         int last = len - 1;
         if (line[last] == '\n')
             line[last] = '\0';
-        if (i < TERMINAL_ROWS)
+        if (i <= terminal_rows)
             puts(line);
     }
     first_line = 0;
@@ -114,6 +114,10 @@ int main(int argc, char *argv[])
         printf("Usage: %s FILE\n", basename(argv[0]));
         return 1;
     }
+
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    terminal_rows = w.ws_row;
 
     struct termios *oldt = init_terminal();
     clear_screen();
