@@ -14,7 +14,7 @@
 #define BUFFER_COLS 80
 
 char buffer[BUFFER_LINES][BUFFER_COLS];
-int terminal_rows, first_line, num_lines;
+int terminal_rows, display_rows, first_line, num_lines;
 
 struct termios *init_terminal(void)
 {
@@ -40,12 +40,26 @@ void scroll_up(void)
 
 void scroll_down(void)
 {
-    if (first_line + terminal_rows >= num_lines)
+    if (first_line + display_rows >= num_lines)
         return;
 
     terminal_scroll_up();
     terminal_cursor_previous_line();
-    puts(buffer[++first_line + terminal_rows]);
+    puts(buffer[++first_line + display_rows - 1]);
+}
+
+void scroll_page_up(void)
+{
+    int i;
+    for (i = 0; i < display_rows; i++)
+        scroll_up();
+}
+
+void scroll_page_down(void)
+{
+    int i;
+    for (i = 0; i < display_rows; i++)
+        scroll_down();
 }
 
 void handle_escape_sequence(void)
@@ -53,14 +67,15 @@ void handle_escape_sequence(void)
     if (getchar() != '[')
         return;
 
-    switch (getchar()) {
-    case 'A':
+    char c = getchar();
+    if (c == 'A')
         scroll_up();
-        break;
-    case 'B':
+    else if (c == 'B')
         scroll_down();
-        break;
-    }
+    else if (c == '5' && getchar() == '~')
+        scroll_page_up();
+    else if (c == '6' && getchar() == '~')
+        scroll_page_down();
 }
 
 void read_content(const char *file)
@@ -76,7 +91,7 @@ void read_content(const char *file)
         int last = len - 1;
         if (line[last] == '\n')
             line[last] = '\0';
-        if (i <= terminal_rows)
+        if (i < display_rows)
             puts(line);
     }
     first_line = 0;
@@ -101,6 +116,7 @@ int main(int argc, char *argv[])
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     terminal_rows = w.ws_row;
+    display_rows = terminal_rows - 1;
 
     struct termios *oldt = init_terminal();
     terminal_erase_data();
