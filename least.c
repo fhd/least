@@ -46,7 +46,7 @@ void position_cursor(int row, int column)
 
 void scroll_up(void)
 {
-    if (first_line == 0)
+    if (first_line <= 0)
         return;
 
     print_escape_sequence("T");
@@ -58,7 +58,7 @@ void scroll_up(void)
 
 void scroll_down(void)
 {
-    if (first_line + terminal_rows == num_lines)
+    if (first_line + terminal_rows >= num_lines)
         return;
 
     print_escape_sequence("S");
