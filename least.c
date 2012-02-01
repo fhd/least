@@ -50,6 +50,7 @@ void scroll_up(void)
         return;
 
     print_escape_sequence("T");
+    print_escape_sequence("2K");
     position_cursor(1, 1);
     puts(buffer[--first_line]);
     position_cursor(terminal_rows, 1);
