@@ -62,20 +62,46 @@ void scroll_page_down(void)
         scroll_down();
 }
 
+void scroll_to_line(int line)
+{
+    first_line = line;
+    terminal_erase_data();
+    terminal_cursor_position(1, 1);
+    int i;
+    for (i = 0; i < display_rows; i++)
+        puts(buffer[line + i]);
+}
+
+void scroll_to_top(void)
+{
+    scroll_to_line(0);
+}
+
+void scroll_to_bottom(void)
+{
+    scroll_to_line(num_lines - display_rows);
+}
+
 void handle_escape_sequence(void)
 {
-    if (getchar() != '[')
-        return;
-
     char c = getchar();
-    if (c == 'A')
-        scroll_up();
-    else if (c == 'B')
-        scroll_down();
-    else if (c == '5' && getchar() == '~')
-        scroll_page_up();
-    else if (c == '6' && getchar() == '~')
-        scroll_page_down();
+    if (c == 'O') {
+        c = getchar();
+        if (c == 'H')
+            scroll_to_top();
+        else if (c == 'F')
+            scroll_to_bottom();
+    } else if (c == '[') {
+        c = getchar();
+        if (c == 'A')
+            scroll_up();
+        else if (c == 'B')
+            scroll_down();
+        else if (c == '5' && getchar() == '~')
+            scroll_page_up();
+        else if (c == '6' && getchar() == '~')
+            scroll_page_down();
+    }
 }
 
 void read_content(const char *file)
