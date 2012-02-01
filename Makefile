@@ -1,4 +1,7 @@
 all: least
 
-least: least.c
+least: least.o terminal.o
 	$(CC) -o $@ $^
+
+%.o: %.c
+	$(CC) -c $<

@@ -5,8 +5,8 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
+#include "terminal.h"
 
-#define ESC 27
 /*
  * TODO: Don't hard code buffer size.
  */
@@ -26,34 +26,16 @@ struct termios *init_terminal(void)
     return oldt;
 }
 
-void print_escape_sequence(const char *seq)
-{
-    printf("%c[%s", ESC, seq);
-}
-
-void clear_screen(void)
-{
-    print_escape_sequence("2J");
-}
-
-void position_cursor(int row, int column)
-{
-    char *seq;
-    asprintf(&seq, "%i;%iH", row, column);
-    print_escape_sequence(seq);
-    free(seq);
-}
-
 void scroll_up(void)
 {
     if (first_line <= 0)
         return;
 
-    print_escape_sequence("T");
-    print_escape_sequence("2K");
-    position_cursor(1, 1);
+    terminal_scroll_down();
+    terminal_erase_in_line();
+    terminal_cursor_position(1, 1);
     puts(buffer[--first_line]);
-    position_cursor(terminal_rows, 1);
+    terminal_cursor_position(terminal_rows, 1);
 }
 
 void scroll_down(void)
@@ -61,8 +43,8 @@ void scroll_down(void)
     if (first_line + terminal_rows >= num_lines)
         return;
 
-    print_escape_sequence("S");
-    print_escape_sequence("F");
+    terminal_scroll_up();
+    terminal_cursor_previous_line();
     puts(buffer[++first_line + terminal_rows]);
 }
 
@@ -121,8 +103,8 @@ int main(int argc, char *argv[])
     terminal_rows = w.ws_row;
 
     struct termios *oldt = init_terminal();
-    clear_screen();
-    position_cursor(1, 1);
+    terminal_erase_data();
+    terminal_cursor_position(1, 1);
     read_content(argv[1]);
     handle_input();
     tcsetattr(STDIN_FILENO, TCSANOW, oldt);
