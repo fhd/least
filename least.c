@@ -142,6 +142,14 @@ void handle_input(void)
             handle_escape_sequence();
 }
 
+void free_buffer()
+{
+    int i;
+    for (i = 0; i < num_lines; i++)
+        free(buffer[i]);
+    free(buffer);
+}
+
 int main(int argc, char *argv[])
 {
     if (argc != 2) {
@@ -153,9 +161,12 @@ int main(int argc, char *argv[])
     read_content(argv[1]);
 
     struct termios *oldt = init_terminal();
+
     scroll_to_line(0);
     handle_input();
+
     tcsetattr(STDIN_FILENO, TCSANOW, oldt);
     free(oldt);
+    free_buffer();
     return 0;
 }
