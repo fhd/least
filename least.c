@@ -7,11 +7,8 @@
 #include <unistd.h>
 #include "terminal.h"
 
-// TODO: Don't hard code this
-#define BUFFER_COLS 80
-
 char **buffer;
-int terminal_rows, display_rows, first_line, num_lines;
+int terminal_rows, terminal_cols, display_rows, first_line, num_lines;
 
 struct termios *init_terminal(void)
 {
@@ -103,8 +100,8 @@ void handle_escape_sequence(void)
 
 char *read_line(FILE *fp)
 {
-    char *line = malloc(BUFFER_COLS);
-    if (!fgets(line, BUFFER_COLS, fp)) {
+    char *line = malloc(terminal_cols);
+    if (!fgets(line, terminal_cols, fp)) {
         free(line);
         return NULL;
     }
@@ -149,6 +146,7 @@ int main(int argc, char *argv[])
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     terminal_rows = w.ws_row;
+    terminal_cols = w.ws_col;
     display_rows = terminal_rows - 1;
 
     struct termios *oldt = init_terminal();
