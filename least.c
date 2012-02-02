@@ -10,6 +10,42 @@
 char **buffer;
 int terminal_rows, terminal_cols, display_rows, first_line, num_lines;
 
+void read_terminal_properties(void)
+{
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    terminal_rows = w.ws_row;
+    terminal_cols = w.ws_col;
+    display_rows = terminal_rows - 1;
+}
+
+char *read_line(FILE *fp)
+{
+    char *line = malloc(terminal_cols);
+    if (!fgets(line, terminal_cols, fp)) {
+        free(line);
+        return NULL;
+    }
+    int last = strlen(line) - 1;
+    if (line[last] == '\n')
+        line[last] = '\0';
+    buffer = realloc(buffer, (num_lines + 1) * sizeof(char *));
+    buffer[num_lines++] = line;
+    return line;
+}
+
+void read_content(const char *file)
+{
+    buffer = NULL;
+    num_lines = 0;
+    FILE *fp = fopen(file, "r");
+    if (!fp) {
+        printf("Unable to open file %s.\n", file);
+        exit(1);
+    }
+    while(read_line(fp));
+}
+
 struct termios *init_terminal(void)
 {
     struct termios *oldt = malloc(sizeof(struct termios));
@@ -98,36 +134,6 @@ void handle_escape_sequence(void)
     }
 }
 
-char *read_line(FILE *fp)
-{
-    char *line = malloc(terminal_cols);
-    if (!fgets(line, terminal_cols, fp)) {
-        free(line);
-        return NULL;
-    }
-    int last = strlen(line) - 1;
-    if (line[last] == '\n')
-        line[last] = '\0';
-    buffer = realloc(buffer, (num_lines + 1) * sizeof(char *));
-    buffer[num_lines++] = line;
-    return line;
-}
-
-void read_content(const char *file)
-{
-    buffer = NULL;
-    first_line = 0;
-    num_lines = 0;
-    FILE *fp = fopen(file, "r");
-    for (;;) {
-        char *line;
-        if (!(line = read_line(fp)))
-            break;
-        if (num_lines < display_rows)
-             puts(line);
-    }
-}
-
 void handle_input(void)
 {
     char c;
@@ -143,16 +149,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    terminal_rows = w.ws_row;
-    terminal_cols = w.ws_col;
-    display_rows = terminal_rows - 1;
+    read_terminal_properties();
+    read_content(argv[1]);
 
     struct termios *oldt = init_terminal();
-    terminal_erase_data();
-    terminal_cursor_position(1, 1);
-    read_content(argv[1]);
+    scroll_to_line(0);
     handle_input();
     tcsetattr(STDIN_FILENO, TCSANOW, oldt);
     free(oldt);
