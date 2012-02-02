@@ -1,4 +1,4 @@
-#define _GNU_SOURCE
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "terminal.h"
@@ -13,10 +13,16 @@ void terminal_cursor_previous_line(void)
     print_escape_sequence("F");
 }
 
+int num_digits(int i)
+{
+    return (i > 0) ? (int) log10((double) i) + 1 : 1;
+}
+
 void terminal_cursor_position(int row, int column)
 {
-    char *seq;
-    asprintf(&seq, "%i;%iH", row, column);
+    int length = num_digits(row) + num_digits(column) + 2;
+    char *seq = malloc(length);
+    snprintf(seq, length, "%i;%iH", row, column);
     print_escape_sequence(seq);
     free(seq);
 }
