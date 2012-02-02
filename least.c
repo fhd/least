@@ -7,13 +7,10 @@
 #include <unistd.h>
 #include "terminal.h"
 
-/*
- * TODO: Don't hard code buffer size.
- */
-#define BUFFER_LINES 1024
+// TODO: Don't hard code this
 #define BUFFER_COLS 80
 
-char buffer[BUFFER_LINES][BUFFER_COLS];
+char **buffer;
 int terminal_rows, display_rows, first_line, num_lines;
 
 struct termios *init_terminal(void)
@@ -104,24 +101,34 @@ void handle_escape_sequence(void)
     }
 }
 
+char *read_line(FILE *fp)
+{
+    char *line = malloc(BUFFER_COLS);
+    if (!fgets(line, BUFFER_COLS, fp)) {
+        free(line);
+        return NULL;
+    }
+    int last = strlen(line) - 1;
+    if (line[last] == '\n')
+        line[last] = '\0';
+    buffer = realloc(buffer, (num_lines + 1) * sizeof(char *));
+    buffer[num_lines++] = line;
+    return line;
+}
+
 void read_content(const char *file)
 {
-    FILE *fp = fopen(file, "r");
-    int i;
-    for (i = 0; i < BUFFER_LINES; i++) {
-        char *line = (char *) &buffer[i];
-        fgets(line, BUFFER_COLS, fp);
-        int len = strlen(line);
-        if (len == 0)
-            break;
-        int last = len - 1;
-        if (line[last] == '\n')
-            line[last] = '\0';
-        if (i < display_rows)
-            puts(line);
-    }
+    buffer = NULL;
     first_line = 0;
-    num_lines = i;
+    num_lines = 0;
+    FILE *fp = fopen(file, "r");
+    for (;;) {
+        char *line;
+        if (!(line = read_line(fp)))
+            break;
+        if (num_lines < display_rows)
+             puts(line);
+    }
 }
 
 void handle_input(void)
